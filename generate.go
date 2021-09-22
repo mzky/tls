@@ -1,7 +1,6 @@
 package tls
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -50,7 +49,7 @@ func GenerateKey(root bool) (*rsa.PrivateKey, error) {
 }
 
 // GenerateRoot return cert, privDER, nil
-func GenerateRoot() (*x509.Certificate, []byte, error) {
+func GenerateRoot() (*x509.Certificate, *rsa.PrivateKey, error) {
 	priv, _ := GenerateKey(true)
 	pub := priv.Public()
 
@@ -98,15 +97,15 @@ func GenerateRoot() (*x509.Certificate, []byte, error) {
 		return nil, nil, err
 	}
 
-	privDER, err := x509.MarshalPKCS8PrivateKey(priv) //key
-	if err != nil {
-		return nil, nil, err
-	}
+	//privDER, err := x509.MarshalPKCS8PrivateKey(priv) //key
+	//if err != nil {
+	//	return nil, nil, err
+	//}
 
-	return rootCert, privDER, nil
+	return rootCert, priv, nil
 }
 
-func ReadRootCert(filename string) (*x509.Certificate, error) {
+func ReadRootCertFile(filename string) (*x509.Certificate, error) {
 	certPEMBlock, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -122,28 +121,49 @@ func ReadRootCert(filename string) (*x509.Certificate, error) {
 	return rootCert, err
 }
 
-func ReadRootKey(filename string) (interface{}, error) {
+//func ReadRootKeyFile(filename string) (interface{}, error) {
+//	keyPEMBlock, err := ioutil.ReadFile(filename)
+//	if err != nil {
+//		return nil, err
+//	}
+//	keyDERBlock, _ := pem.Decode(keyPEMBlock)
+//	if keyDERBlock == nil || keyDERBlock.Type != "PRIVATE KEY" {
+//		return nil, errors.New("ERROR: failed to read the CA key: unexpected content")
+//	}
+//	rootKey, err := x509.ParsePKCS8PrivateKey(keyDERBlock.Bytes)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return rootKey, err
+//}
+
+func ReadPrivKeyFile(filename string) (*rsa.PrivateKey, error) {
 	keyPEMBlock, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 	keyDERBlock, _ := pem.Decode(keyPEMBlock)
-	if keyDERBlock == nil || keyDERBlock.Type != "PRIVATE KEY" {
-		return nil, errors.New("ERROR: failed to read the CA key: unexpected content")
-	}
-	rootKey, err := x509.ParsePKCS8PrivateKey(keyDERBlock.Bytes)
+	rootKey, err := x509.ParsePKCS1PrivateKey(keyDERBlock.Bytes)
 	if err != nil {
 		return nil, err
 	}
 	return rootKey, err
 }
 
-func ReadPrivKey(filename string) (*rsa.PrivateKey, error) {
-	keyPEMBlock, err := ioutil.ReadFile(filename)
+func ReadRootCert(cert []byte) (*x509.Certificate, error) {
+	certDERBlock, _ := pem.Decode(cert)
+	if certDERBlock == nil || certDERBlock.Type != "CERTIFICATE" {
+		return nil, errors.New("ERROR: failed to read the CA certificate: unexpected content")
+	}
+	rootCert, err := x509.ParseCertificate(certDERBlock.Bytes)
 	if err != nil {
 		return nil, err
 	}
-	keyDERBlock, _ := pem.Decode(keyPEMBlock)
+	return rootCert, err
+}
+
+func ReadPrivKey(key []byte) (*rsa.PrivateKey, error) {
+	keyDERBlock, _ := pem.Decode(key)
 	rootKey, err := x509.ParsePKCS1PrivateKey(keyDERBlock.Bytes)
 	if err != nil {
 		return nil, err
@@ -225,38 +245,38 @@ func serialNumber() *big.Int {
 }
 
 // ReadCertificate reads a certificate file and returns a x509.Certificate struct.
-func ReadCertificate(filename string) (*x509.Certificate, error) {
-	b, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	// PEM format
-	if bytes.HasPrefix(b, []byte("-----BEGIN ")) {
-		b, err = ioutil.ReadFile(filename)
-		if err != nil {
-			return nil, err
-		}
-
-		block, _ := pem.Decode(b)
-		if block == nil || block.Type != "CERTIFICATE" {
-			return nil, errors.New("invalid PEM data")
-		}
-		b = block.Bytes
-	}
-
-	// DER format (binary)
-	return x509.ParseCertificate(b)
-}
+//func ReadCertificate(filename string) (*x509.Certificate, error) {
+//	b, err := ioutil.ReadFile(filename)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	// PEM format
+//	if bytes.HasPrefix(b, []byte("-----BEGIN ")) {
+//		b, err = ioutil.ReadFile(filename)
+//		if err != nil {
+//			return nil, err
+//		}
+//
+//		block, _ := pem.Decode(b)
+//		if block == nil || block.Type != "CERTIFICATE" {
+//			return nil, errors.New("invalid PEM data")
+//		}
+//		b = block.Bytes
+//	}
+//
+//	// DER format (binary)
+//	return x509.ParseCertificate(b)
+//}
 
 // SaveCertificate saves the given x509.Certificate with the given filename.
-func SaveCertificate(filename string, cert *x509.Certificate) error {
-	block := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: cert.Raw,
-	}
-	return ioutil.WriteFile(filename, pem.EncodeToMemory(block), 0644)
-}
+//func SaveCertificate(filename string, cert *x509.Certificate) error {
+//	block := &pem.Block{
+//		Type:  "CERTIFICATE",
+//		Bytes: cert.Raw,
+//	}
+//	return ioutil.WriteFile(filename, pem.EncodeToMemory(block), 0644)
+//}
 
 func WritePEM(filepath string, pem []byte) error {
 	return ioutil.WriteFile(filepath, pem, 0644)

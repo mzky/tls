@@ -6,14 +6,19 @@ import (
 
 func main() {
 
-	tls.GenerateRoot()
-
 	var ca tls.CACert
-	ca.Cert, _ = tls.ReadRootCert("root.cer")
-	ca.Key, _ = tls.ReadPrivKey("root.key")
+	ca.Cert, ca.Key, _ = tls.GenerateRoot()
 	c, k, _ := ca.GenerateServer([]string{"127.0.0.1"})
 
-	tls.WritePEM("server.pem", c)
-	tls.WritePEM("server.key", k)
+	ca.Cert, _ = tls.ReadRootCertFile("root.cer")
+	ca.Key, _ = tls.ReadPrivKeyFile("root.key")
+	//c, k, _ := ca.GenerateServer([]string{"127.0.0.1"})
+
+	ca.Cert, _ = tls.ReadRootCert([]byte("cert"))
+	ca.Key, _ = tls.ReadPrivKey([]byte("key"))
+	//c, k, _ := ca.GenerateServer([]string{"127.0.0.1"})
+
+	_ = tls.WritePEM("server.pem", c)
+	_ = tls.WritePEM("server.key", k)
 	//fmt.Println(generate.GenerateRoot())
 }
