@@ -1,4 +1,4 @@
-package generate
+package tlsCert
 
 import (
 	"bytes"
@@ -265,7 +265,7 @@ func WritePEM(filepath string, pem []byte) error {
 func hashPublicKey(key *rsa.PublicKey) ([]byte, error) {
 	b, err := x509.MarshalPKIXPublicKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to hash key: %s", err)
+		return nil, fmt.Errorf("unable to hash key: %s", err)
 	}
 
 	h := sha1.New()
