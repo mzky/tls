@@ -1,3 +1,3 @@
-module main
+module cmd
 
 go 1.16
