@@ -1,4 +1,4 @@
-package tlsCert
+package tls
 
 import (
 	"bytes"
@@ -50,7 +50,7 @@ func GenerateKey(root bool) (*rsa.PrivateKey, error) {
 }
 
 // GenerateRoot return cert, privDER, nil
-func (c CACert) GenerateRoot() (*x509.Certificate, []byte, error) {
+func GenerateRoot() (*x509.Certificate, []byte, error) {
 	priv, _ := GenerateKey(true)
 	pub := priv.Public()
 

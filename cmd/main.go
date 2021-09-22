@@ -5,6 +5,7 @@ import (
 )
 
 func main() {
+
 	tls.GenerateRoot()
 
 	var ca tls.CACert
