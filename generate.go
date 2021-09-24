@@ -197,11 +197,17 @@ func (c CACert) GenerateServer(hosts []string) ([]byte, []byte, error) {
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(1, 0, 0),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 
 	for _, h := range hosts {
 		if ip := net.ParseIP(h); ip != nil {
 			tpl.IPAddresses = append(tpl.IPAddresses, ip)
+			if h != "127.0.0.1" && h != "::1" && tpl.Subject.CommonName == "" {
+				// IIS (the main target of PKCS #12 files), only shows the deprecated
+				// Common Name in the UI. See issue #115.
+				tpl.Subject.CommonName = h
+			}
 		} else if email, err := mail.ParseAddress(h); err == nil && email.Address == h {
 			tpl.EmailAddresses = append(tpl.EmailAddresses, h)
 		} else if uriName, err := url.Parse(h); err == nil && uriName.Scheme != "" && uriName.Host != "" {
@@ -211,17 +217,9 @@ func (c CACert) GenerateServer(hosts []string) ([]byte, []byte, error) {
 		}
 	}
 
-	//if len(tpl.IPAddresses) > 0 || len(tpl.DNSNames) > 0 || len(tpl.URIs) > 0 {
-	//	tpl.ExtKeyUsage = append(tpl.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
-	//}
-	//if len(tpl.EmailAddresses) > 0 {
-	//	tpl.ExtKeyUsage = append(tpl.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
-	//}
-
-	// IIS (the main target of PKCS #12 files), only shows the deprecated
-	// Common Name in the UI. See issue #115.
-	tpl.Subject.CommonName = hosts[0]
-
+	if tpl.Subject.CommonName == "" {
+		tpl.Subject.CommonName = hosts[0]
+	}
 	cert, err := x509.CreateCertificate(rand.Reader, tpl, c.Cert, pub, c.Key)
 	if err != nil {
 		return nil, nil, err
@@ -243,40 +241,6 @@ func serialNumber() *big.Int {
 	sn, _ := rand.Int(rand.Reader, serialNumberLimit)
 	return sn
 }
-
-// ReadCertificate reads a certificate file and returns a x509.Certificate struct.
-//func ReadCertificate(filename string) (*x509.Certificate, error) {
-//	b, err := ioutil.ReadFile(filename)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// PEM format
-//	if bytes.HasPrefix(b, []byte("-----BEGIN ")) {
-//		b, err = ioutil.ReadFile(filename)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		block, _ := pem.Decode(b)
-//		if block == nil || block.Type != "CERTIFICATE" {
-//			return nil, errors.New("invalid PEM data")
-//		}
-//		b = block.Bytes
-//	}
-//
-//	// DER format (binary)
-//	return x509.ParseCertificate(b)
-//}
-
-// SaveCertificate saves the given x509.Certificate with the given filename.
-//func SaveCertificate(filename string, cert *x509.Certificate) error {
-//	block := &pem.Block{
-//		Type:  "CERTIFICATE",
-//		Bytes: cert.Raw,
-//	}
-//	return ioutil.WriteFile(filename, pem.EncodeToMemory(block), 0644)
-//}
 
 func WritePEM(filepath string, pem []byte) error {
 	return ioutil.WriteFile(filepath, pem, 0644)
