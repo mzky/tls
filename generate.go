@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"strings"
 	"time"
 )
 
@@ -203,7 +204,7 @@ func (c CACert) GenerateServer(hosts []string) ([]byte, []byte, error) {
 	for _, h := range hosts {
 		if ip := net.ParseIP(h); ip != nil {
 			tpl.IPAddresses = append(tpl.IPAddresses, ip)
-			if h != "127.0.0.1" && h != "::1" && tpl.Subject.CommonName == "" {
+			if IsIPv4(h) && !IsSameIP(h, "127.0.0.1") && tpl.Subject.CommonName == "" {
 				// IIS (the main target of PKCS #12 files), only shows the deprecated
 				// Common Name in the UI. See issue #115.
 				tpl.Subject.CommonName = h
@@ -234,6 +235,57 @@ func (c CACert) GenerateServer(hosts []string) ([]byte, []byte, error) {
 
 	return certPEM, privPEM, nil
 
+}
+
+func IsIP(host string) bool {
+	return net.ParseIP(host) != nil
+}
+
+func IsSameIP(ipFirst, ipSecond string) bool {
+	ip1 := net.ParseIP(ipFirst)
+	ip2 := net.ParseIP(ipSecond)
+	if ip1 == nil || ip2 == nil {
+		return false
+	}
+
+	return ip1.Equal(ip2)
+}
+
+func IsIPv4(ip string) bool {
+	if len(ip) == 0 {
+		return false
+	}
+
+	if len(strings.Split(ip, ".")) != 4 {
+		return false
+	}
+
+	return IsIP(ip)
+}
+
+func IsIPv6(ip string) bool {
+	fmtIP, err := FormatIp(ip)
+	if err != nil {
+		return false
+	}
+
+	if len(fmtIP) == 0 {
+		return false
+	}
+
+	if len(strings.Split(fmtIP, ":")) < 3 {
+		return false
+	}
+
+	return IsIP(fmtIP)
+}
+
+func FormatIp(ipStr string) (string, error) {
+	ip := net.ParseIP(strings.TrimSpace(ipStr))
+	if ip == nil {
+		return "", fmt.Errorf("IP地址错误")
+	}
+	return ip.String(), nil
 }
 
 func serialNumber() *big.Int {
