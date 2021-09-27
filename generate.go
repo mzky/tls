@@ -78,8 +78,8 @@ func GenerateRoot() (*x509.Certificate, *rsa.PrivateKey, error) {
 		},
 		SubjectKeyId: skid[:],
 
-		NotAfter:  time.Now().AddDate(100, 0, 0),
 		NotBefore: time.Now(),
+		NotAfter:  time.Now().AddDate(100, 0, 0),
 
 		KeyUsage:    x509.KeyUsageCertSign,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
@@ -138,6 +138,24 @@ func ReadRootCertFile(filename string) (*x509.Certificate, error) {
 //	return rootKey, err
 //}
 
+func CertificateInfo(certPath string) (*x509.Certificate, error) {
+	certFile, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return nil, errors.New("地址或权限异常") // 创建第一个证书&异常情况创建证书
+	}
+
+	pemBlock, _ := pem.Decode(certFile)
+	if pemBlock == nil {
+		return nil, errors.New("证书格式错误")
+	}
+
+	cert, err := x509.ParseCertificate(pemBlock.Bytes)
+	if err != nil {
+		return nil, errors.New("证书解析异常")
+	}
+	return cert, nil
+}
+
 func ReadPrivKeyFile(filename string) (*rsa.PrivateKey, error) {
 	keyPEMBlock, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -195,8 +213,8 @@ func (c CACert) GenerateServer(hosts []string) ([]byte, []byte, error) {
 		IsCA:                  false,
 		MaxPathLenZero:        false,
 		SubjectKeyId:          keyID[:],
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(1, 0, 0),
+		NotBefore:             time.Now().AddDate(0, 0, -1), // 取当前时间存在与测试机的时效性
+		NotAfter:              time.Now().AddDate(1, 0, -1),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}

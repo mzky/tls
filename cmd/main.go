@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"strings"
 
@@ -25,6 +26,8 @@ func main() {
 	_ = tls.WritePEM("server.pem", c)
 	_ = tls.WritePEM("server.key", k)
 	//fmt.Println(generate.GenerateRoot())
+	cert, _ := tls.CertificateInfo("server.pem")
+	fmt.Println(cert.NotAfter.Local().Format("2006-01-02_15:04"))
 }
 
 func appendIPNet(slice []net.IPNet, element net.IPNet) []net.IPNet {
