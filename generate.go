@@ -215,8 +215,9 @@ func (c CACert) GenerateServer(hosts []string) ([]byte, []byte, error) {
 		SubjectKeyId:          keyID[:],
 		NotBefore:             time.Now().AddDate(0, 0, -1), // 取当前时间存在与测试机的时效性
 		NotAfter:              time.Now().AddDate(1, 0, -1),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		//x509.KeyUsageContentCommitment 防抵赖项不支持早期版本IE11
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 
 	for _, h := range hosts {
